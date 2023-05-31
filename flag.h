@@ -248,7 +248,6 @@ namespace flag {
         static constexpr std::array<std::string_view, 4> trueValues{"true", "t", "yes", "y"};
         static constexpr std::array<std::string_view, 5> falseValues{"false", "f", "no", "n"};
         auto fn = [&](std::string_view s) -> std::optional<FlagError> {
-            var = !s.empty() && s != "false";
             if (s.empty()) {
                 var = true;
             } else {
