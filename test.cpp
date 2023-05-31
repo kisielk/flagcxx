@@ -1,5 +1,6 @@
 #include "flag.h"
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 void parse(flag::FlagSet& flags, std::vector<const char *> &v) {
   auto error = flags.Parse(static_cast<int>(v.size()), v.data());
@@ -188,5 +189,91 @@ TEST_CASE("int") {
         auto error = parseError(flags, args);
         REQUIRE(error.Type() == flag::Error::EType::BadValue);
         REQUIRE(i == 0);
+    }
+}
+
+TEST_CASE("float") {
+    float f{};
+    flag::FlagSet flags{};
+    flags.Var(f, "f", "A float flag");
+
+    using Catch::Matchers::WithinAbs;
+
+    SECTION("A positive integer") {
+        ArgsT args{"program", "-f=1"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE_THAT(f, WithinAbs(1, 0.01));
+    }
+
+    SECTION("A positive float") {
+        ArgsT args{"program", "-f=1.4"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE_THAT(f, WithinAbs(1.4, 0.01));
+    }
+
+    SECTION("A negative integer") {
+        ArgsT args{"program", "-f=-1"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE_THAT(f, WithinAbs(-1, 0.01));
+    }
+
+    SECTION("A negative float") {
+        ArgsT args{"program", "-f=-1.93"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE_THAT(f, WithinAbs(-1.93, 0.01));
+    }
+
+    SECTION("Non-numeric argument") {
+        ArgsT args{"program", "-f=abc"};
+        auto error = parseError(flags, args);
+        REQUIRE(error.Type() == flag::Error::EType::BadValue);
+        REQUIRE_THAT(f, WithinAbs(0, 0.01));
+    }
+}
+
+TEST_CASE("double") {
+    double d{};
+    flag::FlagSet flags{};
+    flags.Var(d, "d", "A double flag");
+
+    using Catch::Matchers::WithinAbs;
+
+    SECTION("A positive integer") {
+        ArgsT args{"program", "-d=1"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE_THAT(d, WithinAbs(1, 0.01));
+    }
+
+    SECTION("A positive float") {
+        ArgsT args{"program", "-d=1.4"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE_THAT(d, WithinAbs(1.4, 0.01));
+    }
+
+    SECTION("A negative integer") {
+        ArgsT args{"program", "-d=-1"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE_THAT(d, WithinAbs(-1, 0.01));
+    }
+
+    SECTION("A negative float") {
+        ArgsT args{"program", "-d=-1.93"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE_THAT(d, WithinAbs(-1.93, 0.01));
+    }
+
+    SECTION("Non-numeric argument") {
+        ArgsT args{"program", "-d=abc"};
+        auto error = parseError(flags, args);
+        REQUIRE(error.Type() == flag::Error::EType::BadValue);
+        REQUIRE_THAT(d, WithinAbs(0, 0.01));
     }
 }

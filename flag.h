@@ -203,7 +203,33 @@ namespace flag {
         }
 
         template<>
-        Flag::SetFn MakeSetFn(std::string& var) {
+        Flag::SetFn MakeSetFn(float &var) {
+            return [&](std::string_view s) {
+                std::stringstream ss;
+                ss << s;
+                ss >> var;
+                if (ss.fail()) {
+                    return std::optional<FlagError>{FlagError("number is not a float")};
+                }
+                return std::optional<FlagError>{};
+            };
+        }
+
+        template<>
+        Flag::SetFn MakeSetFn(double &var) {
+            return [&](std::string_view s) {
+              std::stringstream ss;
+              ss << s;
+              ss >> var;
+              if (ss.fail()) {
+                  return std::optional<FlagError>{FlagError("number is not a double")};
+              }
+              return std::optional<FlagError>{};
+            };
+        }
+
+        template<>
+        Flag::SetFn MakeSetFn(std::string &var) {
             return [&](std::string_view s) {
                 var = s;
                 return std::optional<FlagError>{};
@@ -222,19 +248,19 @@ namespace flag {
         static constexpr std::array<std::string_view, 4> trueValues{"true", "t", "yes", "y"};
         static constexpr std::array<std::string_view, 5> falseValues{"false", "f", "no", "n"};
         auto fn = [&](std::string_view s) -> std::optional<FlagError> {
-          var = !s.empty() && s != "false";
-          if (s.empty()) {
-              var = true;
-          } else {
-              if (std::find(trueValues.begin(), trueValues.end(), s) != trueValues.end()) {
-                  var = true;
-              } else if (std::find(falseValues.begin(), falseValues.end(), s) != falseValues.end()) {
-                  var = false;
-              } else {
-                  return FlagError("Unknown boolean value");
-              }
-          }
-          return {};
+            var = !s.empty() && s != "false";
+            if (s.empty()) {
+                var = true;
+            } else {
+                if (std::find(trueValues.begin(), trueValues.end(), s) != trueValues.end()) {
+                    var = true;
+                } else if (std::find(falseValues.begin(), falseValues.end(), s) != falseValues.end()) {
+                    var = false;
+                } else {
+                    return FlagError("Unknown boolean value");
+                }
+            }
+            return {};
         };
         auto flag = Flag{fn, usage, true};
         flags.insert({name, flag});
