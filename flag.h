@@ -1,5 +1,6 @@
 #pragma once
 
+#include <charconv>
 #include <functional>
 #include <optional>
 #include <sstream>
@@ -42,10 +43,10 @@ namespace flag {
     struct Flag {
         using SetFn = std::function<std::optional<FlagError>(std::string_view)>;
 
-        Flag(SetFn fn, std::string usage, bool isBool = false) : setFn(fn), usage(std::move(usage)), isBool(isBool) {}
+        Flag(SetFn fn, std::string_view usage, bool isBool = false) : setFn(std::move(fn)), usage(usage), isBool(isBool) {}
 
         SetFn setFn;
-        std::string usage{};
+        std::string_view usage{};
         bool isBool{false};
     };
 
@@ -56,7 +57,7 @@ namespace flag {
         [[nodiscard]] std::optional<Error> Parse(int argc, const char **argv);
 
         template<typename T>
-        void Var(T &var, std::string name, std::string usage);
+        void Var(T &var, std::string_view name, std::string_view usage);
 
         /// Returns whether a command line has been parsed.
         [[nodiscard]] inline bool Parsed() const { return parsed; }
@@ -112,19 +113,20 @@ namespace flag {
             // it's a flag, does it have a value?
             auto hasValue = false;
             std::string_view value{};
-
             for (size_t i = 1; i < s.size(); ++i) {
                 if (s[i] == '=') {
                     value = s;
-                    value.remove_prefix(i);
+                    value.remove_prefix(i + 1);
                     s.remove_suffix(s.size() - i);
                     hasValue = true;
                 }
             }
             auto name = s;
 
+            // Search for the flag name in the flags.
             auto flag = flags.find(name);
             if (flag == flags.end()) {
+                // Not found in flags.
                 if (name == "help" || name == "h") {
                     // Special case for usage.
                     return Error(Error::EType::Help, "");
@@ -174,7 +176,7 @@ namespace flag {
 
         // Slurp up remaining positional arguments.
         while (argc) {
-            args.push_back(*argv);
+            args.emplace_back(*argv);
             argc--;
             argv++;
         }
@@ -189,8 +191,13 @@ namespace flag {
         template<>
         Flag::SetFn MakeSetFn(int &var) {
             return [&](std::string_view s) {
-                // TODO: convert to int
-                var = 0;
+                auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), var);
+                if (ec == std::errc::invalid_argument) {
+                    return std::optional<FlagError>{FlagError("number is not an integer")};
+                }
+                if (ec == std::errc::result_out_of_range) {
+                    return std::optional<FlagError>{FlagError("number is out of range")};
+                }
                 return std::optional<FlagError>{};
             };
         }
@@ -205,16 +212,29 @@ namespace flag {
     }// namespace detail
 
     template<typename T>
-    void FlagSet::Var(T &var, std::string name, std::string usage) {
+    void FlagSet::Var(T &var, std::string_view name, std::string_view usage) {
         auto flag = Flag{detail::MakeSetFn(var), usage, false};
         flags.insert({name, flag});
     }
 
     template<>
-    void FlagSet::Var(bool &var, std::string name, std::string usage) {
-        auto fn = [&](std::string_view s) {
-          var = s.size() > 0;
-          return std::optional<FlagError>{};
+    void FlagSet::Var(bool &var, std::string_view name, std::string_view usage) {
+        static constexpr std::array<std::string_view, 4> trueValues{"true", "t", "yes", "y"};
+        static constexpr std::array<std::string_view, 5> falseValues{"false", "f", "no", "n"};
+        auto fn = [&](std::string_view s) -> std::optional<FlagError> {
+          var = !s.empty() && s != "false";
+          if (s.empty()) {
+              var = true;
+          } else {
+              if (std::find(trueValues.begin(), trueValues.end(), s) != trueValues.end()) {
+                  var = true;
+              } else if (std::find(falseValues.begin(), falseValues.end(), s) != falseValues.end()) {
+                  var = false;
+              } else {
+                  return FlagError("Unknown boolean value");
+              }
+          }
+          return {};
         };
         auto flag = Flag{fn, usage, true};
         flags.insert({name, flag});

@@ -1,6 +1,21 @@
 #include "flag.h"
-
 #include <catch2/catch_test_macros.hpp>
+
+void parse(flag::FlagSet& flags, std::vector<const char *> &v) {
+  auto error = flags.Parse(static_cast<int>(v.size()), v.data());
+  CAPTURE(error->What());
+  REQUIRE(error.has_value() == false);
+  REQUIRE(flags.Parsed() == true);
+}
+
+flag::Error parseError(flag::FlagSet& flags, std::vector<const char *> &v) {
+    auto error = flags.Parse(static_cast<int>(v.size()), v.data());
+    REQUIRE(error.has_value());
+    REQUIRE(flags.Parsed());
+    return *error;
+}
+
+using ArgsT = std::vector<const char *>;
 
 TEST_CASE("Parse failures") {
     flag::FlagSet flags;
@@ -12,42 +27,42 @@ TEST_CASE("Parse failures") {
     };
 
     SECTION("Attempt to parse 0") {
-        std::vector<const char *> args{};
+        ArgsT args{};
         parse(args);
         REQUIRE(error.has_value());
         REQUIRE(error->Type() == flag::Error::EType::NumArgs);
     }
 
     SECTION("Bad argument name: ---") {
-        std::vector<const char *> args{"program", "---"};
+        ArgsT args{"program", "---"};
         parse(args);
         REQUIRE(error.has_value());
         REQUIRE(error->Type() == flag::Error::EType::BadSyntax);
     }
 
     SECTION("Bad argument name: --=") {
-        std::vector<const char *> args{"program", "--="};
+        ArgsT args{"program", "--="};
         parse(args);
         REQUIRE(error.has_value());
         REQUIRE(error->Type() == flag::Error::EType::BadSyntax);
     }
 
     SECTION("Undefined flag: -d") {
-        std::vector<const char *> args{"program", "-d"};
+        ArgsT args{"program", "-d"};
         parse(args);
         REQUIRE(error.has_value());
         REQUIRE(error->Type() == flag::Error::EType::UndefinedFlag);
     }
 
     SECTION("Help with --help") {
-        std::vector<const char *> args{"program", "--help", "--", "arg"};
+        ArgsT args{"program", "--help", "--", "arg"};
         parse(args);
         REQUIRE(error.has_value());
         REQUIRE(error->Type() == flag::Error::EType::Help);
     }
 
     SECTION("Help with -h") {
-        std::vector<const char *> args{"program", "-h", "--", "arg"};
+        ArgsT args{"program", "-h", "--", "arg"};
         parse(args);
         REQUIRE(error.has_value());
         REQUIRE(error->Type() == flag::Error::EType::Help);
@@ -66,13 +81,13 @@ TEST_CASE("Parse successes") {
     };
 
     SECTION("No arguments") {
-        std::vector<const char *> args{"program"};
+        ArgsT args{"program"};
         parse(args);
         REQUIRE(flags.Args().empty() == true);
     }
 
     SECTION("Positional args") {
-        std::vector<const char *> args{"program", "arg1", "arg2"};
+        ArgsT args{"program", "arg1", "arg2"};
         parse(args);
         REQUIRE(flags.Args().size() == 2);
         REQUIRE(flags.Args()[0] == "arg1");
@@ -80,7 +95,7 @@ TEST_CASE("Parse successes") {
     }
 
     SECTION("Positional args with '-' as an argument") {
-        std::vector<const char *> args{"program", "-", "arg2"};
+        ArgsT args{"program", "-", "arg2"};
         parse(args);
         REQUIRE(flags.Args().size() == 2);
         REQUIRE(flags.Args()[0] == "-");
@@ -88,61 +103,90 @@ TEST_CASE("Parse successes") {
     }
 
     SECTION("Positional args with separator") {
-        std::vector<const char *> args{"program", "--", "arg1", "arg2"};
+        ArgsT args{"program", "--", "arg1", "arg2"};
         parse(args);
         REQUIRE(flags.Args().size() == 2);
         REQUIRE(flags.Args()[0] == "arg1");
         REQUIRE(flags.Args()[1] == "arg2");
     }
+}
 
-    SECTION("Bool flag") {
-        bool b{false};
-        flags.Var(b, "b", "A boolean");
+TEST_CASE("bool") {
+    bool b{false};
+    flag::FlagSet flags;
+    std::string flagName{"b"};
+    flags.Var(b, flagName, "A boolean");
+    std::optional<flag::Error> error{};
+    REQUIRE(flags.Parsed() == false);
 
-        SECTION("-b not passed") {
-            std::vector<const char *> args{"program"};
-            parse(args);
-            REQUIRE(flags.Args().empty());
-            REQUIRE(b == false);
-        }
-
-        SECTION("-b passed") {
-            std::vector<const char *> args{"program", "-b"};
-            parse(args);
-            REQUIRE(flags.Args().empty());
-            REQUIRE(b == true);
-        }
-
-        SECTION("-b=true") {
-            std::vector<const char *> args{"program", "-b=true"};
-            parse(args);
-            REQUIRE(flags.Args().empty());
-            REQUIRE(b == true);
-        }
-
-        SECTION("-b=false") {
-            std::vector<const char *> args{"program", "-b=false"};
-            parse(args);
-            REQUIRE(flags.Args().empty());
-            REQUIRE(b == false);
-        }
+    SECTION("-b not passed") {
+        ArgsT args{"program"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE(b == false);
     }
 
-    SECTION("String flag") {
-        std::string s{};
-        flags.Var(s, "string", "A string flag");
-
-        SECTION("String passed") {
-            std::vector<const char*> args{"program", "-s=foo"};
-            parse(args);
-            REQUIRE(flags.Args().empty());
-            REQUIRE(s == "foo");
-        }
+    SECTION("-b passed") {
+        ArgsT args{"program", "-b"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE(b == true);
     }
 
-    if (error) {
-        CAPTURE(error->What());
+    SECTION("-b=true") {
+        ArgsT args{"program", "-b=true"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE(b == true);
     }
-    REQUIRE(error.has_value() == false);
-    REQUIRE(flags.Parsed() == true);
+
+    SECTION("-b=false") {
+        ArgsT args{"program", "-b=false"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE(b == false);
+    }
+}
+
+TEST_CASE("string") {
+    std::string s{};
+    flag::FlagSet flags;
+    flags.Var(s, "s", "A string flag");
+    std::optional<flag::Error> error{};
+    REQUIRE(flags.Parsed() == false);
+
+    SECTION("String passed") {
+        ArgsT args{"program", "-s=foo"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE(s == "foo");
+    }
+}
+
+TEST_CASE("int") {
+    int i{};
+    flag::FlagSet flags;
+    flags.Var(i, "i", "An int flag");
+    REQUIRE(flags.Parsed() == false);
+
+    SECTION("A positive integer") {
+        ArgsT args{"program", "-i=1"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE(i == 1);
+    }
+
+    SECTION("A negative integer") {
+        ArgsT args{"program", "-i=-1"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE(i == -1);
+    }
+
+    SECTION("Non-numeric argument") {
+        ArgsT args{"program", "-i=+1"};
+        auto error = parseError(flags, args);
+        REQUIRE(error.Type() == flag::Error::EType::BadValue);
+        REQUIRE(i == 0);
+    }
 }
