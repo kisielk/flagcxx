@@ -117,8 +117,6 @@ TEST_CASE("bool") {
     flag::FlagSet flags;
     std::string flagName{"b"};
     flags.Var(b, flagName, "A boolean");
-    std::optional<flag::Error> error{};
-    REQUIRE(flags.Parsed() == false);
 
     SECTION("-b not passed") {
         ArgsT args{"program"};
@@ -153,7 +151,6 @@ TEST_CASE("string") {
     std::string s{};
     flag::FlagSet flags;
     flags.Var(s, "s", "A string flag");
-    std::optional<flag::Error> error{};
     REQUIRE(flags.Parsed() == false);
 
     SECTION("String passed") {

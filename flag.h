@@ -235,6 +235,26 @@ namespace flag {
                 return std::optional<FlagError>{};
             };
         }
+
+        template<>
+        Flag::SetFn MakeSetFn(bool &var) {
+            static constexpr std::array<std::string_view, 4> trueValues{"true", "t", "yes", "y"};
+            static constexpr std::array<std::string_view, 5> falseValues{"false", "f", "no", "n"};
+            return [&](std::string_view s) -> std::optional<FlagError> {
+                if (s.empty()) {
+                    var = true;
+                } else {
+                    if (std::find(trueValues.begin(), trueValues.end(), s) != trueValues.end()) {
+                        var = true;
+                    } else if (std::find(falseValues.begin(), falseValues.end(), s) != falseValues.end()) {
+                        var = false;
+                    } else {
+                        return FlagError("Unknown boolean value");
+                    }
+                }
+                return {};
+            };
+        }
     }// namespace detail
 
     template<typename T>
@@ -245,23 +265,7 @@ namespace flag {
 
     template<>
     void FlagSet::Var(bool &var, std::string_view name, std::string_view usage) {
-        static constexpr std::array<std::string_view, 4> trueValues{"true", "t", "yes", "y"};
-        static constexpr std::array<std::string_view, 5> falseValues{"false", "f", "no", "n"};
-        auto fn = [&](std::string_view s) -> std::optional<FlagError> {
-            if (s.empty()) {
-                var = true;
-            } else {
-                if (std::find(trueValues.begin(), trueValues.end(), s) != trueValues.end()) {
-                    var = true;
-                } else if (std::find(falseValues.begin(), falseValues.end(), s) != falseValues.end()) {
-                    var = false;
-                } else {
-                    return FlagError("Unknown boolean value");
-                }
-            }
-            return {};
-        };
-        auto flag = Flag{fn, usage, true};
+        auto flag = Flag{detail::MakeSetFn(var), usage, true};
         flags.insert({name, flag});
     }
 
