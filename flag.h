@@ -59,6 +59,9 @@ namespace flag {
         template<typename T>
         void Var(T &var, std::string_view name, std::string_view usage);
 
+        template<typename T>
+        void Var(std::optional<T> &var, std::string_view name, std::string_view usage);
+
         /// Returns whether a command line has been parsed.
         [[nodiscard]] inline bool Parsed() const { return parsed; }
 
@@ -255,6 +258,19 @@ namespace flag {
                 return {};
             };
         }
+
+        template<typename T>
+        Flag::SetFn MakeOptionalSetFn(std::optional<T>& var) {
+            return [&](std::string_view s) {
+                T tmp{};
+                auto err = MakeSetFn(tmp)(s);
+                if (err) {
+                    return err;
+                }
+                var = tmp;
+                return std::optional<FlagError>{};
+            };
+        }
     }// namespace detail
 
     template<typename T>
@@ -263,9 +279,21 @@ namespace flag {
         flags.insert({name, flag});
     }
 
+    template<typename T>
+    void FlagSet::Var(std::optional<T> &var, std::string_view name, std::string_view usage) {
+        auto flag = Flag{detail::MakeOptionalSetFn(var), usage, false};
+        flags.insert({name, flag});
+    }
+
     template<>
     void FlagSet::Var(bool &var, std::string_view name, std::string_view usage) {
         auto flag = Flag{detail::MakeSetFn(var), usage, true};
+        flags.insert({name, flag});
+    }
+
+    template<>
+    void FlagSet::Var(std::optional<bool> &var, std::string_view name, std::string_view usage) {
+        auto flag = Flag{detail::MakeOptionalSetFn(var), usage, true};
         flags.insert({name, flag});
     }
 

@@ -139,11 +139,91 @@ TEST_CASE("bool") {
         REQUIRE(b == true);
     }
 
+    SECTION("-b=t") {
+        ArgsT args{"program", "-b=t"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE(b == true);
+    }
+
+    SECTION("-b=yes") {
+        ArgsT args{"program", "-b=yes"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE(b == true);
+    }
+
+    SECTION("-b=y") {
+        ArgsT args{"program", "-b=y"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE(b == true);
+    }
+
     SECTION("-b=false") {
         ArgsT args{"program", "-b=false"};
         parse(flags, args);
         REQUIRE(flags.Args().empty());
         REQUIRE(b == false);
+    }
+
+    SECTION("-b=f") {
+        ArgsT args{"program", "-b=f"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE(b == false);
+    }
+
+    SECTION("-b=no") {
+        ArgsT args{"program", "-b=no"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE(b == false);
+    }
+
+    SECTION("-b=n") {
+        ArgsT args{"program", "-b=n"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE(b == false);
+    }
+}
+
+TEST_CASE("std::optional<bool>") {
+    std::optional<bool> b{};
+    flag::FlagSet flags;
+    std::string flagName{"b"};
+    flags.Var(b, flagName, "A boolean");
+
+    SECTION("-b not passed") {
+        ArgsT args{"program"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE(!b.has_value());
+    }
+
+    SECTION("-b passed") {
+        ArgsT args{"program", "-b"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE(b.has_value());
+        REQUIRE(*b == true);
+    }
+
+    SECTION("-b=true") {
+        ArgsT args{"program", "-b=true"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE(b.has_value());
+        REQUIRE(*b == true);
+    }
+
+    SECTION("-b=false") {
+        ArgsT args{"program", "-b=false"};
+        parse(flags, args);
+        REQUIRE(flags.Args().empty());
+        REQUIRE(b.has_value());
+        REQUIRE(*b == false);
     }
 }
 
