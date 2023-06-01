@@ -11,7 +11,8 @@ int main(int argc, char** argv) {
   // Flag values are stored in plain old variables.
   int count;
   float amount;
-  string name{"unknown"}; // Default values are given at variable initialization
+  std::string name{"unknown"}; // Default values are given at variable initialization
+  std::optional<std::string> optional_description; // Use std::optional to check if a flag was set
   bool enable;
 
   // Use the FlagSet type to define the command line flags and map them to the variables
@@ -20,6 +21,7 @@ int main(int argc, char** argv) {
   flags.Var(count, "count", "The count of things, an integer value");
   flags.Var(amount, "amount", "The amount of something, a floating point value");
   flags.Var(name, "name", "The name of a thing, a string value");
+  flags.Var(optional_description, "description", "An optional description of a thing, a string value");
   flags.Var(enable, "enable", "A boolean flag to enable something, or not");
 
   // Use the parse method to parse the command line arguments into the flag variables.
