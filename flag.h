@@ -22,8 +22,8 @@ namespace flag {
 
         Error(EType type, std::string message) : type(type), message(std::move(message)) {}
 
-        [[nodiscard]] inline EType Type() { return type; }
-        [[nodiscard]] inline std::string What() { return message; }
+        [[nodiscard]] inline EType Type() const { return type; }
+        [[nodiscard]] inline std::string What() const { return message; }
 
     private:
         EType type;
@@ -34,7 +34,7 @@ namespace flag {
     public:
         explicit FlagError(std::string message) : message(std::move(message)) {}
 
-        [[nodiscard]] inline std::string What() { return message; }
+        [[nodiscard]] inline std::string What() const { return message; }
 
     private:
         std::string message;
@@ -57,10 +57,10 @@ namespace flag {
         [[nodiscard]] std::optional<Error> Parse(int argc, const char **argv);
 
         template<typename T>
-        void Var(T &var, std::string_view name, std::string_view usage);
+        inline void Var(T &var, std::string_view name, std::string_view usage);
 
         template<typename T>
-        void Var(std::optional<T> &var, std::string_view name, std::string_view usage);
+        inline void Var(std::optional<T> &var, std::string_view name, std::string_view usage);
 
         /// Returns whether a command line has been parsed.
         [[nodiscard]] inline bool Parsed() const { return parsed; }
